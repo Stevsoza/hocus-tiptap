@@ -11,9 +11,22 @@ export default defineConfig({
     host: "0.0.0.0",
     proxy: {
       '/api': {
-        target: 'http://localhost:1234',
+        target: 'http://localhost:4000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        secure: false
+        // rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/auth': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false
+        // rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/logout': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false
+        // rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/ws': {
         target: 'ws://localhost:1234',

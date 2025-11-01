@@ -2,7 +2,7 @@
   /****************** 
   Basics
   ******************/
-  // color: white;
+  // color: black;
   overflow-wrap: break-word;
   text-size-adjust: none;
   text-rendering: optimizeLegibility;
@@ -115,7 +115,8 @@
 
   /* Basic colors */
   --white: rgba(255, 255, 255, 1);
-  --black: rgba(14, 14, 17, 1);
+  // --black: rgba(14, 14, 17, 1);
+  --black: #1e1e1e;
   --transparent: rgba(255, 255, 255, 0);
 
   /****************** 
@@ -184,7 +185,7 @@
   --tt-scrollbar-color: var(--tt-gray-light-a-200);
   --tt-cursor-color: var(--tt-brand-color-500);
   --tt-selection-color: rgba(157, 138, 255, 0.2);
-  --tt-card-bg-color: var(--white);
+  --tt-card-bg-color: var(--tt-white);
   --tt-card-border-color: var(--tt-gray-light-a-100);
 }
 

@@ -75,23 +75,23 @@ import "@/components/tiptap-templates/simple/simple-editor.scss"
 
 // import content from "@/components/tiptap-templates/simple/data/content.json"
 import Collaboration from "@tiptap/extension-collaboration"
+import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import { HocuspocusProvider } from "@hocuspocus/provider"
 import * as Y from "yjs"
 
 
-
-
 const ydoc = new Y.Doc()
-
 
 const MainToolbarContent = ({
   onHighlighterClick,
   onLinkClick,
   isMobile,
+  isDarkMode
 }: {
   onHighlighterClick: () => void
   onLinkClick: () => void
-  isMobile: boolean
+  isMobile: boolean,
+  isDarkMode: boolean
 }) => {
   return (
     <>
@@ -157,7 +157,7 @@ const MainToolbarContent = ({
       {isMobile && <ToolbarSeparator />}
 
       <ToolbarGroup>
-        <ThemeToggle />
+        <ThemeToggle theme={isDarkMode} />
       </ToolbarGroup>
     </>
   )
@@ -192,90 +192,102 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor() {
+interface ProfileProps {
+  id: string;
+  displayName: string;
+  emails: { value: string }[];
+}
+
+
+export function SimpleEditor({ user , actualColorScheme }: { user: ProfileProps, actualColorScheme: string }) {
   const isMobile = useIsMobile()
   const { height } = useWindowSize()
+  const provider = new HocuspocusProvider({
+    url: "/ws",
+    name: "hocuspocus",
+    document: ydoc,
+  })
+  console.log(user.id)
+  function generateColorFromId(id: string) {
+    const colors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+      '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788',
+      '#E63946', '#457B9D', '#F72585', '#7209B7', '#06D6A0',
+    ]
+
+    // FNV-1a hash
+    let hash = 2166136261
+    for (let i = 0; i < id.length; i++) {
+      hash ^= id.charCodeAt(i)
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24)
+    }
+
+    const index = Math.abs(hash) % colors.length
+    return colors[index]
+  }
+
   const [mobileView, setMobileView] = React.useState<
     "main" | "highlighter" | "link"
   >("main")
   const toolbarRef = React.useRef<HTMLDivElement>(null)
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    shouldRerenderOnTransaction: false,
-    editorProps: {
-      attributes: {
-        autocomplete: "off",
-        autocorrect: "off",
-        autocapitalize: "off",
-        "aria-label": "Main content area, start typing to enter text.",
-        class: "simple-editor",
-      },
-    },
-    // onUpdate: ({ editor }) => {
-    //   console.log(editor.getHTML())
-    // },
-    extensions: [
-      Collaboration.configure({
-        document: ydoc,
-      }),
-      StarterKit.configure({
-        horizontalRule: false,
-        link: {
-          openOnClick: false,
-          enableClickSelection: true,
+  const editorOptions = ()=>{
+    return {
+      editorProps: {
+        attributes: {
+          autocomplete: "off",
+          autocorrect: "off",
+          autocapitalize: "off",
+          "aria-label": "Main content area, start typing to enter text.",
+          class: "simple-editor",
         },
-      }),
-      HorizontalRule,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
-      Image,
-      Typography,
-      Superscript,
-      Subscript,
-      Selection,
-      ImageUploadNode.configure({
-        accept: "image/*",
-        maxSize: MAX_FILE_SIZE,
-        limit: 3,
-        upload: handleImageUpload,
-        onError: (error) => console.error("Upload failed:", error),
-      }),
-    ],
-  })
+      },
+      extensions: [
+        StarterKit.configure({
+          undoRedo: false,
+          horizontalRule: false,
+          link: { openOnClick: false, enableClickSelection: true },
+        }),
+        HorizontalRule,
+        TextAlign.configure({ types: ["heading", "paragraph"] }),
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Highlight.configure({ multicolor: true }),
+        Image,
+        Typography,
+        Superscript,
+        Subscript,
+        Selection,
+        ImageUploadNode.configure({
+          accept: "image/*",
+          maxSize: MAX_FILE_SIZE,
+          limit: 3,
+          upload: handleImageUpload,
+          onError: (error) => console.error("Upload failed:", error),
+        }),
+        Collaboration.configure({ document: ydoc }),
+        CollaborationCaret.configure({
+          provider,
+          user: {
+            name: user.displayName,
+            color: generateColorFromId(user.id),
+          },
+        }),
+      ],
+    }
+  }
+
+  const editor = useEditor(editorOptions())
 
   const rect = useCursorVisibility({
     editor,
     overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
   })
-
   React.useEffect(() => {
     if (!isMobile && mobileView !== "main") {
       setMobileView("main")
     }
   }, [isMobile, mobileView])
-
-  React.useEffect(() => {
-    const provider = new HocuspocusProvider({
-      url: "/ws",
-      name: "hocuspocus",
-      document: ydoc,
-      onSynced(){
-        console.log('onSynced')
-        if (!ydoc.getMap('config').get('initialContentLoaded') && editor) {
-          ydoc.getMap('config').set('initialContentLoaded', true)
-
-          editor.commands.setContent(`
-          <p>This is a radically reduced version of Tiptap. It has support for a document, with paragraphs and text. That’s it. It’s probably too much for real minimalists though.</p>
-          <p>The paragraph extension is not really required, but you need at least one node. Sure, that node can be something different.</p>
-          `)
-        }
-      }
-    })
-  }, [])
-
 
   return (
     <div className="simple-editor-wrapper">
@@ -295,6 +307,7 @@ export function SimpleEditor() {
               onHighlighterClick={() => setMobileView("highlighter")}
               onLinkClick={() => setMobileView("link")}
               isMobile={isMobile}
+              isDarkMode={actualColorScheme === "dark"}
             />
           ) : (
             <MobileToolbarContent

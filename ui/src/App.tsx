@@ -1,42 +1,136 @@
-// import '@mantine/core/styles.css';
-import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor'
-// import { Container, MantineProvider, Table, Center } from '@mantine/core';
+import '@mantine/core/styles.css';
+import { useEffect, useState } from "react";
+import Login from "./components/login";
+import {
+  Stack,
+  Switch,
+  AppShell,
+  Tabs,
+  Avatar,
+  Group,
+  Text,
+  Container,
+  MantineProvider,
+  ActionIcon,
+} from "@mantine/core";
+import { IconLogout } from "@tabler/icons-react";
+import { useLocalStorage } from '@mantine/hooks';
+import { IconHome, IconUser, IconSettings } from "@tabler/icons-react";
+import { useViewManager } from "./core/ViewManager";
+import { type ViewKey } from "./core/views";
 
-export default function App() {
-  const elements = [
-    { position: 6, mass: 12.011, symbol: 'C', name: 'Carbon' },
-    { position: 7, mass: 14.007, symbol: 'N', name: 'Nitrogen' },
-    { position: 39, mass: 88.906, symbol: 'Y', name: 'Yttrium' },
-    { position: 56, mass: 137.33, symbol: 'Ba', name: 'Barium' },
-    { position: 58, mass: 140.12, symbol: 'Ce', name: 'Cerium' },
-  ];
-  // const rows = elements.map((element) => (
-  //   <Table.Tr key={element.name}>
-  //     <Table.Td>{element.position}</Table.Td>
-  //     <Table.Td>{element.name}</Table.Td>
-  //     <Table.Td>{element.symbol}</Table.Td>
-  //     <Table.Td>{element.mass}</Table.Td>
-  //   </Table.Tr>
-  // ));
-  return <SimpleEditor />
-  // return <MantineProvider defaultColorScheme='dark'>
-  //   <Center h={'100vh'} w={"100vw"}>
-  //     <Container>
-  //       <Table>
-  //         <Table.Thead>
-  //           <Table.Tr>
-  //             <Table.Th>Element position</Table.Th>
-  //             <Table.Th>Element name</Table.Th>
-  //             <Table.Th>Symbol</Table.Th>
-  //             <Table.Th>Atomic mass</Table.Th>
-  //           </Table.Tr>
-  //         </Table.Thead>
-  //         <Table.Tbody>{rows}</Table.Tbody>
-  //       </Table>
-  //     </Container>
-  //   </Center>
-  // </MantineProvider>
-
+interface GoogleUser {
+  id: string;
+  displayName: string;
+  emails: { value: string }[];
+  photos: { value: string }[];
 }
 
+type ColorScheme = 'light' | 'dark'
 
+export default function App() {
+  const [colorScheme, setColorScheme] = useLocalStorage<ColorScheme>({
+    key: 'mantine-color-scheme',
+    defaultValue: 'dark',
+    getInitialValueInEffect: true,
+  })
+
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<GoogleUser | null>(null);
+  const { currentView, setView, ViewComponent } = useViewManager("home");
+
+  // 🔹 Obtener sesión actual del backend
+  useEffect(() => {
+    fetch("/api/user", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(data)
+        if (!data.message) setUser(data);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    console.log(colorScheme)
+  }, [colorScheme])
+
+  if (loading) {
+    return (
+      <MantineProvider defaultColorScheme={colorScheme}>
+        <div style={{ color: "white", textAlign: "center", marginTop: "40vh" }}>
+          Cargando...
+        </div>
+      </MantineProvider>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Login />
+    );
+  }
+
+  return (
+    <MantineProvider defaultColorScheme="dark" forceColorScheme={colorScheme}>
+      <AppShell style={{height: "100%"}} padding="md">
+        {/* <AppShell.Header p="sm">
+          <Group justify="space-between">
+            <Group>
+              <Avatar src={user.photos[0].value} radius="xl" />
+              <div>
+                <Text fw={500}>{user.displayName}</Text>
+                <Text fz="sm" c="dimmed">
+                  {user.emails[0].value}
+                </Text>
+              </div>
+            </Group>
+            <Group mt="md" mr="md">
+              <Switch label="Modo oscuro" checked={colorScheme === "dark"} onChange={(e) => setColorScheme(e.currentTarget.checked ? 'dark' : 'light')} />
+              <ActionIcon color="red" size={32} onClick={handleLogout}> <IconLogout size={24} /> </ActionIcon>
+            </Group>
+          </Group>
+        </AppShell.Header> */}
+
+        <AppShell.Main style={{ height: "2rem" }}>
+            <Tabs
+              defaultValue="home"
+              value={currentView}
+              variant="outline"
+              radius="md"
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+              }}
+              onChange={(val) => setView(val as ViewKey)}
+            >
+              <Tabs.List mb="md">
+                <Tabs.Tab value="home" leftSection={<IconHome size={18} />}>
+                  Inicio
+                </Tabs.Tab>
+                <Tabs.Tab value="profile" leftSection={<IconUser size={18} />}>
+                  Perfil
+                </Tabs.Tab>
+                <Tabs.Tab value="tiptap" leftSection={<IconSettings size={18} />}>
+                  Tiptap
+                </Tabs.Tab>
+              </Tabs.List>
+              <Container 
+                fluid
+                style={{
+                  width: "100%",
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "auto",
+                }}
+              >
+                <ViewComponent user={user} actualColorScheme={colorScheme}  colorSchemeChange = {setColorScheme} style={{flex: 1, borderRadius: "5px"}} />
+              </Container>
+            </Tabs>
+        </AppShell.Main>
+      </AppShell>
+    </MantineProvider>
+  );
+}

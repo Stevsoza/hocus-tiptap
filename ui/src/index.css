@@ -1,12 +1,14 @@
 @import './styles/_variables.scss';
 @import './styles/_keyframe-animations.scss';
 body {
-  margin: 0;
-  display: flex;
+  /* margin: 0; */
+  /* display: flex;
+  justify-content: center;
   place-items: center;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100vh; */
 }
+
 /*
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -70,4 +72,5 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
 */
